@@ -17,10 +17,12 @@ public class PricePlanService {
 
     private final List<PricePlan> pricePlans;
     private final MeterReadingService meterReadingService;
+    private final PriceCalculationStrategy priceCalculationStrategy;
 
-    public PricePlanService(List<PricePlan> pricePlans, MeterReadingService meterReadingService) {
+    public PricePlanService(List<PricePlan> pricePlans, MeterReadingService meterReadingService, PriceCalculationStrategy priceCalculationStrategy) {
         this.pricePlans = pricePlans;
         this.meterReadingService = meterReadingService;
+        this.priceCalculationStrategy = priceCalculationStrategy;
     }
 
     public Optional<Map<String, BigDecimal>> getConsumptionCostOfElectricityReadingsForEachPricePlan(
@@ -32,34 +34,9 @@ public class PricePlanService {
         }
 
         return Optional.of(pricePlans.stream()
-                .collect(Collectors.toMap(PricePlan::getPlanName, t -> calculateCost(electricityReadings.get(), t))));
-    }
-
-    private BigDecimal calculateCost(List<ElectricityReading> electricityReadings, PricePlan pricePlan) {
-        final BigDecimal averageReadingInKw = calculateAverageReading(electricityReadings);
-        final BigDecimal usageTimeInHours = calculateUsageTimeInHours(electricityReadings);
-        final BigDecimal energyConsumedInKwH = averageReadingInKw.divide(usageTimeInHours, RoundingMode.HALF_UP);
-        final BigDecimal cost = energyConsumedInKwH.multiply(pricePlan.getUnitRate());
-        return cost;
-    }
-
-    private BigDecimal calculateAverageReading(List<ElectricityReading> electricityReadings) {
-        BigDecimal summedReadings = electricityReadings.stream()
-                .map(ElectricityReading::reading)
-                .reduce(BigDecimal.ZERO, (reading, accumulator) -> reading.add(accumulator));
-
-        return summedReadings.divide(BigDecimal.valueOf(electricityReadings.size()), RoundingMode.HALF_UP);
-    }
-
-    private BigDecimal calculateUsageTimeInHours(List<ElectricityReading> electricityReadings) {
-        ElectricityReading first = electricityReadings.stream()
-                .min(Comparator.comparing(ElectricityReading::time))
-                .get();
-
-        ElectricityReading last = electricityReadings.stream()
-                .max(Comparator.comparing(ElectricityReading::time))
-                .get();
-
-        return BigDecimal.valueOf(Duration.between(first.time(), last.time()).getSeconds() / 3600.0);
+                .collect(Collectors.toMap(
+                    PricePlan::getPlanName,
+                    t -> priceCalculationStrategy.calculateCost(electricityReadings.get(), t)
+                )));
     }
 }

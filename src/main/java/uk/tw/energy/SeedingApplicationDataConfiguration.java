@@ -61,4 +61,9 @@ public class SeedingApplicationDataConfiguration {
         objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
         return objectMapper;
     }
+
+    @Bean
+    public uk.tw.energy.service.PriceCalculationStrategy priceCalculationStrategy() {
+        return new uk.tw.energy.service.StandardPriceCalculationStrategy();
+    }
 }

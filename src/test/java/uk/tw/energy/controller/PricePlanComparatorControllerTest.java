@@ -3,6 +3,7 @@ package uk.tw.energy.controller;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.AbstractMap;
 import java.util.HashMap;
@@ -17,6 +18,7 @@ import uk.tw.energy.domain.PricePlan;
 import uk.tw.energy.service.AccountService;
 import uk.tw.energy.service.MeterReadingService;
 import uk.tw.energy.service.PricePlanService;
+import uk.tw.energy.service.StandardPriceCalculationStrategy;
 
 public class PricePlanComparatorControllerTest {
     private static final String WORST_PLAN_ID = "worst-supplier";
@@ -35,7 +37,7 @@ public class PricePlanComparatorControllerTest {
         PricePlan pricePlan2 = new PricePlan(BEST_PLAN_ID, null, BigDecimal.ONE, null);
         PricePlan pricePlan3 = new PricePlan(SECOND_BEST_PLAN_ID, null, BigDecimal.valueOf(2), null);
         List<PricePlan> pricePlans = List.of(pricePlan1, pricePlan2, pricePlan3);
-        PricePlanService pricePlanService = new PricePlanService(pricePlans, meterReadingService);
+        PricePlanService pricePlanService = new PricePlanService(pricePlans, meterReadingService, new StandardPriceCalculationStrategy());
 
         accountService = new AccountService(Map.of(SMART_METER_ID, WORST_PLAN_ID));
 
@@ -56,9 +58,9 @@ public class PricePlanComparatorControllerTest {
                 WORST_PLAN_ID,
                 PricePlanComparatorController.PRICE_PLAN_COMPARISONS_KEY,
                 Map.of(
-                        WORST_PLAN_ID, BigDecimal.valueOf(100.0),
-                        BEST_PLAN_ID, BigDecimal.valueOf(10.0),
-                        SECOND_BEST_PLAN_ID, BigDecimal.valueOf(20.0)));
+                        WORST_PLAN_ID, BigDecimal.valueOf(100.0).setScale(1, RoundingMode.HALF_UP),
+                        BEST_PLAN_ID, BigDecimal.valueOf(10.0).setScale(1, RoundingMode.HALF_UP),
+                        SECOND_BEST_PLAN_ID, BigDecimal.valueOf(20.0).setScale(1, RoundingMode.HALF_UP)));
         assertThat(response.getBody()).isEqualTo(expected);
     }
 
@@ -80,9 +82,9 @@ public class PricePlanComparatorControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         var expectedPricePlanToCost = List.of(
-                new AbstractMap.SimpleEntry<>(BEST_PLAN_ID, BigDecimal.valueOf(38.0)),
-                new AbstractMap.SimpleEntry<>(SECOND_BEST_PLAN_ID, BigDecimal.valueOf(76.0)),
-                new AbstractMap.SimpleEntry<>(WORST_PLAN_ID, BigDecimal.valueOf(380.0)));
+                new AbstractMap.SimpleEntry<>(BEST_PLAN_ID, BigDecimal.valueOf(19.0).setScale(1, RoundingMode.HALF_UP)),
+                new AbstractMap.SimpleEntry<>(SECOND_BEST_PLAN_ID, BigDecimal.valueOf(38.0).setScale(1, RoundingMode.HALF_UP)),
+                new AbstractMap.SimpleEntry<>(WORST_PLAN_ID, BigDecimal.valueOf(190.0).setScale(1, RoundingMode.HALF_UP)));
         assertThat(response.getBody()).isEqualTo(expectedPricePlanToCost);
     }
 
@@ -96,8 +98,8 @@ public class PricePlanComparatorControllerTest {
                 controller.recommendCheapestPricePlans(SMART_METER_ID, 2);
 
         var expectedPricePlanToCost = List.of(
-                new AbstractMap.SimpleEntry<>(BEST_PLAN_ID, BigDecimal.valueOf(16.7)),
-                new AbstractMap.SimpleEntry<>(SECOND_BEST_PLAN_ID, BigDecimal.valueOf(33.4)));
+                new AbstractMap.SimpleEntry<>(BEST_PLAN_ID, BigDecimal.valueOf(8.4).setScale(1, RoundingMode.HALF_UP)),
+                new AbstractMap.SimpleEntry<>(SECOND_BEST_PLAN_ID, BigDecimal.valueOf(16.7).setScale(1, RoundingMode.HALF_UP)));
         assertThat(response.getBody()).isEqualTo(expectedPricePlanToCost);
     }
 
@@ -111,9 +113,9 @@ public class PricePlanComparatorControllerTest {
                 controller.recommendCheapestPricePlans(SMART_METER_ID, 5);
 
         var expectedPricePlanToCost = List.of(
-                new AbstractMap.SimpleEntry<>(BEST_PLAN_ID, BigDecimal.valueOf(14.0)),
-                new AbstractMap.SimpleEntry<>(SECOND_BEST_PLAN_ID, BigDecimal.valueOf(28.0)),
-                new AbstractMap.SimpleEntry<>(WORST_PLAN_ID, BigDecimal.valueOf(140.0)));
+                new AbstractMap.SimpleEntry<>(BEST_PLAN_ID, BigDecimal.valueOf(7.0).setScale(1, RoundingMode.HALF_UP)),
+                new AbstractMap.SimpleEntry<>(SECOND_BEST_PLAN_ID, BigDecimal.valueOf(14.0).setScale(1, RoundingMode.HALF_UP)),
+                new AbstractMap.SimpleEntry<>(WORST_PLAN_ID, BigDecimal.valueOf(70.0).setScale(1, RoundingMode.HALF_UP)));
         assertThat(response.getBody()).isEqualTo(expectedPricePlanToCost);
     }
 }
